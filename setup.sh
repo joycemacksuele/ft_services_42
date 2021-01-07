@@ -53,21 +53,31 @@ function config_cluster_ips()
 	MINIKUBE_IP="$(kubectl get node -o=custom-columns='DATA:status.addresses[0].address' | sed -n 2p)"
 	# -n = will not print anything unless an explicit request to print is found
 	# 2p = request to print second line
-
-	if [[ $2 = 'vm' ]] ; then
-		NGINX_IP=192.168.49.3
-		FTPS_IP=192.168.49.4
-		WORDPRESS_IP=192.168.49.5
-		PHPMYADMIN_IP=192.168.49.6
-		GRAFANA_IP=192.168.49.7
+	if [[ $OSTYPE = 'linux-gnu' ]] ; then
+#		NGINX_IP=192.168.49.3
+#		FTPS_IP=192.168.49.4
+#		WORDPRESS_IP=192.168.49.5
+#		PHPMYADMIN_IP=192.168.49.6
+#		GRAFANA_IP=192.168.49.7
+		NGINX_IP="${MINIKUBE_IP::11}3"
+		FTPS_IP="${MINIKUBE_IP::11}4"
+		WORDPRESS_IP="${MINIKUBE_IP::11}5"
+		PHPMYADMIN_IP="${MINIKUBE_IP::11}6"
+		GRAFANA_IP="${MINIKUBE_IP::11}7"
+#		echo -e "$bold_red $GRAFANA_IP\n"
 	fi
 
-	if [[ $2 = 'mac' ]] ; then
-		NGINX_IP=192.168.99.106
-		FTPS_IP=192.168.99.107
-		WORDPRESS_IP=192.168.99.108
-		PHPMYADMIN_IP=192.168.99.109
-		GRAFANA_IP=192.168.99.100
+	if [[ $OSTYPE = 'darwin20' ]] ; then
+#		NGINX_IP=192.168.99.103
+#		FTPS_IP=192.168.99.104
+#		WORDPRESS_IP=192.168.99.105
+#		PHPMYADMIN_IP=192.168.99.106
+#		GRAFANA_IP=192.168.99.107
+		NGINX_IP="${MINIKUBE_IP::13}3"
+		FTPS_IP="${MINIKUBE_IP::13}4"
+		WORDPRESS_IP="${MINIKUBE_IP::13}5"
+		PHPMYADMIN_IP="${MINIKUBE_IP::13}6"
+		GRAFANA_IP="${MINIKUBE_IP::13}7"
 	fi
 }
 
@@ -95,6 +105,7 @@ if [[ $1 = 'delete' ]] ; then
 
 		for path in srcs/services/3_mysql_database/wordpress.sql
 		do
+			sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
 			sed -i 's/'$NGINX_IP'/NGINX_IP/g' $path
 			sed -i 's/'$FTPS_IP'/FTPS_IP/g' $path
 			sed -i 's/'$WORDPRESS_IP'/WORDPRESS_IP/g' $path
@@ -107,6 +118,11 @@ if [[ $1 = 'delete' ]] ; then
 		do
 			sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
 			echo -ne "\nMINIKUBE_IP variable was unset inside the file $path \n"
+		done
+
+		for path in srcs/yaml_files/loadbalancer_metallb.yaml
+		do
+			sed -i 's/'${MINIKUBE_IP::11}3-${MINIKUBE_IP::11}7'/CLUSTER_POOL/g' $path
 		done
 	fi
 
@@ -126,6 +142,7 @@ if [[ $1 = 'delete' ]] ; then
 
 		for path in srcs/services/3_mysql_database/wordpress.sql
 		do
+			sed -i '' 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
 			sed -i '' 's/'$NGINX_IP'/NGINX_IP/g' $path
 			sed -i '' 's/'$FTPS_IP'/FTPS_IP/g' $path
 			sed -i '' 's/'$WORDPRESS_IP'/WORDPRESS_IP/g' $path
@@ -138,6 +155,11 @@ if [[ $1 = 'delete' ]] ; then
 		do
 			sed -i '' 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
 			echo -ne "\nMINIKUBE_IP variable was unset inside the file $path \n"
+		done
+
+		for path in srcs/yaml_files/loadbalancer_metallb.yaml
+		do
+			sed -i 's/'${MINIKUBE_IP::13}3-${MINIKUBE_IP::13}7'/CLUSTER_POOL/g' $path
 		done
 	fi
 
@@ -229,11 +251,22 @@ function install_metallb()
 	# the communication between speakers for the fast dead node detection
 	kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 
-	if [[ $OSTYPE = 'darwin20' ]] ; then
-		kubectl apply -f srcs/yaml_files/loadbalancer_metallb_mac.yaml
-	elif [[ $OSTYPE = 'linux-gnu' ]] ; then
-		kubectl apply -f srcs/yaml_files/loadbalancer_metallb.yaml
-	fi
+	config_cluster_ips
+	for path in srcs/yaml_files/loadbalancer_metallb.yaml
+	do
+		if [[ $OSTYPE = 'linux-gnu' ]] ; then
+			sed -i 's/CLUSTER_POOL/'${MINIKUBE_IP::11}3-${MINIKUBE_IP::11}7'/g' $path
+		elif [[ $OSTYPE = 'darwin20' ]] ; then
+			sed -i 's/CLUSTER_POOL/'${MINIKUBE_IP::13}3-${MINIKUBE_IP::13}7'/g' $path
+		fi
+		echo -ne "$bold_green CLUSTER_POOL variable inside $path file was replaced\n\n"
+	done
+
+#	if [[ $OSTYPE = 'darwin20' ]] ; then
+#		kubectl apply -f srcs/yaml_files/loadbalancer_metallb_mac.yaml
+#	elif [[ $OSTYPE = 'linux-gnu' ]] ; then
+	kubectl apply -f srcs/yaml_files/loadbalancer_metallb.yaml
+#	fi
 }
 ### Minikube tunnel may also be another option
 
@@ -254,9 +287,9 @@ function edit_ip_variable()
 
 		for path in srcs/services/1_nginx_server/index.html
 		do
-			if [[ $2 = 'vm' ]] ; then
+			if [[ $OSTYPE = 'linux-gnu' ]] ; then
 				sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
-			else
+			elif [[ $OSTYPE = 'darwin20' ]] ; then
 				sed -i '' 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
 			fi
 		done
@@ -266,6 +299,7 @@ function edit_ip_variable()
 	if [[ $1 = 'wordpressdump' ]] ; then
 		for path in srcs/services/3_mysql_database/wordpress.sql
 		do
+			sed -i.bak 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
 			sed -i.bak 's/NGINX_IP/'$NGINX_IP'/g' $path
 			sed -i.bak 's/FTPS_IP/'$FTPS_IP'/g' $path
 			sed -i.bak 's/WORDPRESS_IP/'$WORDPRESS_IP'/g' $path
@@ -278,9 +312,9 @@ function edit_ip_variable()
 	if [[ $1 = 'grafana' ]] ; then
 		for path in srcs/services/7_grafana_influxdblinked/grafana.ini
 		do
-			if [[ $2 = 'vm' ]] ; then
+			if [[ $OSTYPE = 'linux-gnu' ]] ; then
 				sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
-			else
+			elif [[ $OSTYPE = 'darwin20' ]] ; then
 				sed -i '' 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
 			fi
 		done
@@ -299,7 +333,7 @@ function build_docker_images()
 	# The page displayed does not matter (it'll be index.php in this case)
 	# You must be able to access the Nginx container by logging into SSH
 	edit_ip_variable 'nginxredirecions'
-	echo -ne "$bold_green IP variables inside ./srcs/services/1_nginx_server/basic_nginx.conf file were replaced\n\n"
+	echo -ne "$bold_green IP variables inside ./srcs/services/1_nginx_server/basic_nginx.conf and index.html files were replaced\n\n"
 
 	echo -ne "$bold_yellow Building a Nginx server image...\n$reset"
 	docker build -t 1_nginx_server srcs/services/1_nginx_server/ > 1_nginx_server.txt
@@ -309,6 +343,7 @@ function build_docker_images()
 
 	echo -ne "\n$bold_green Done!\n\n"
 	echo -e "$bold_white ------------------------------------\n"
+	ssh-keygen -f "/home/user42/.ssh/known_hosts" -R "$NGINX_IP" &> /dev/null
 
 ########################## 2_ftps_server #########################
 	# A FTPS server listening on port 21
@@ -371,9 +406,6 @@ function build_docker_images()
 #################### 8_telegraf_influxdblinked ####################
 	# Telegraf will collect metrics from a variety of different systems and
 	# push to InfluxDB so they can be later analyzed in Grafana
-	edit_ip_variable 'telegraf'
-	echo -ne "$bold_green MINIKUBE_IP variable inside ./srcs/services/8_telegraf_influxdblinked/Dockerfile file was replaced with the address $MINIKUBE_IP\n\n"
-
 	echo -ne "$bold_yellow Building a Telegraf image...\n\n$reset"
 	docker build -t 8_telegraf_influxdblinked srcs/services/8_telegraf_influxdblinked/ > 8_telegraf_influxdblinked.txt
 
