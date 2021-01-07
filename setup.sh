@@ -24,14 +24,14 @@ reset='\033[0m'
 ############################ Welcome #############################
 if [[ ! $1 ]] ; then
 	\clear
-	echo -e "$bold_white ------------------------------------\n
-	\033[5;32m WELCOME TO FT_SERVICES\n$reset
-	$bold_dark_blue For VM Linux:
-	$bold_white ./setup.sh vm$bold_green to run\n$bold_white ./setup.sh delete vm$bold_red to delete everything \n
-	$bold_dark_blue For 42 Mac:
-	$bold_white ./setup.sh mac$bold_green to run\n$bold_white ./setup.sh delete mac$bold_red to delete everything \n
-	$bold_green <by jfreitas @ Ecole 42>\n
-	$bold_white ------------------------------------"
+echo -e "$bold_white ------------------------------------\n
+\033[5;32m WELCOME TO FT_SERVICES\n$reset
+$bold_dark_blue For VM Linux:
+$bold_white ./setup.sh vm$bold_green to run\n$bold_white ./setup.sh delete vm$bold_red to delete everything \n
+$bold_dark_blue For 42 Mac:
+$bold_white ./setup.sh mac$bold_green to run\n$bold_white ./setup.sh delete mac$bold_red to delete everything \n
+$bold_green <by jfreitas @ Ecole 42>\n
+$bold_white ------------------------------------"
 	exit
 fi
 
@@ -75,6 +75,12 @@ if [[ $1 = 'delete' ]] ; then
 		echo -ne "\nIP variables were unset inside the file $path"
 	done
 
+	for path in srcs/services/1_nginx_server/index.html
+	do
+		sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
+		echo -ne "\nMINIKUBE_IP variable was unset inside the file $path"
+	done
+
 	for path in srcs/services/3_mysql_database/wordpress.sql
 	do
 		sed -i 's/172.17.0.7/WORDPRESS_IP/g' $path
@@ -92,7 +98,7 @@ if [[ $1 = 'delete' ]] ; then
 	# delete this part if minikube tunnel is used
 	if [[ $OSTYPE = 'linux-gnu' ]] ; then
 		kubectl delete -f srcs/yaml_files/loadbalancer_metallb.yaml
-	elif [[ $OSTYPE = 'darwin19' ]] ; then
+	elif [[ $OSTYPE = 'darwin20' ]] ; then
 		kubectl delete -f srcs/yaml_files/loadbalancer_metallb_mac.yaml
 	fi
 
@@ -137,7 +143,7 @@ fi
 # This script will install it if it's not already installed
 # Normaly kubectl is already installed on the 42 Mac and the VM
 # <which> command will return 0 if the specified command is found and executable
-if [[ $1 = 'mac' && $OSTYPE = 'darwin19' || $1 = 'vm' && $OSTYPE = 'linux-gnu' ]] ; then
+if [[ $1 = 'mac' && $OSTYPE = 'darwin20' || $1 = 'vm' && $OSTYPE = 'linux-gnu' ]] ; then
 	\clear
 	echo -ne "\n$bold_yellow Checking if Kubectl is installed...\n\n"
 	# OBS: if color is between {} (ex: ${bold_green}, then no space is needed
@@ -149,7 +155,7 @@ if [[ $1 = 'mac' && $OSTYPE = 'darwin19' || $1 = 'vm' && $OSTYPE = 'linux-gnu' ]
 	else
 		echo -ne "$bold_red Kubectl is not installed.\n$bold_green Installing...$bold_white\n"
 		sudo rm -rf /usr/local/bin/kubectl
-		if [[ $1 = 'mac' && $OSTYPE = 'darwin19' ]] ; then
+		if [[ $1 = 'mac' && $OSTYPE = 'darwin20' ]] ; then
 			curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/darwin/amd64/kubectl"
 		fi
 		if [[ $1 = 'vm' && $OSTYPE = 'linux-gnu' ]] ; then
@@ -175,7 +181,7 @@ function install_metallb()
 	# the communication between speakers for the fast dead node detection
 	kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 
-	if [[ $OSTYPE = 'darwin19' ]] ; then
+	if [[ $OSTYPE = 'darwin20' ]] ; then
 		kubectl apply -f srcs/yaml_files/loadbalancer_metallb_mac.yaml
 	elif [[ $OSTYPE = 'linux-gnu' ]] ; then
 		kubectl apply -f srcs/yaml_files/loadbalancer_metallb.yaml
@@ -189,13 +195,18 @@ function edit_ip_variable()
 {
 	config_cluster_ips
 
-### Nginx redirections
+### Nginx redirections and index
 	if [[ $1 = 'nginxredirecions' ]] ; then
 		for path in srcs/services/1_nginx_server/basic_nginx.conf
 		do
 			sed -i.bak 's/WORDPRESS_IP/'$WORDPRESS_IP'/g' $path
 			sed -i.bak 's/PHPMYADMIN_IP/'$PHPMYADMIN_IP'/g' $path
 			sed -i.bak 's/GRAFANA_IP/'$GRAFANA_IP'/g' $path
+		done
+
+		for path in srcs/services/1_nginx_server/index.html
+		do
+			sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
 		done
 	fi
 
@@ -347,7 +358,7 @@ function kubernetes_dashboard()
 ###############################################################################
 ############################## Script for MacOS ###############################
 ###############################################################################
-if [[ $1 = 'mac' && $OSTYPE = 'darwin19' ]] ; then
+if [[ $1 = 'mac' && $OSTYPE = 'darwin20' ]] ; then
 
 ############################ Minikube ############################
 # Minikube is a tool that makes it easy to run Kubernetes locally
@@ -427,7 +438,7 @@ if [[ $1 = 'mac' && $OSTYPE = 'darwin19' ]] ; then
 
 	# if any cluster already exists, delete everything
 	minikube status | grep -c "Running" > /dev/null
-	if [[ $? != 0 ]] ; then
+	if [[ $? == 0 ]] ; then
 		echo -ne "$bold_yellow If any Minikube cluster is running, it will be deleted, together with it's virtualbox.\n\n"
 		./setup.sh delete mac
 	fi
@@ -674,7 +685,7 @@ if [[ $1 = 'vm' && $OSTYPE = 'linux-gnu' ]] ; then
 
 
 ######################### Cheking OS #############################
-elif [[ $1 = 'vm' && $OSTYPE = 'darwin19' ]] ; then
+elif [[ $1 = 'vm' && $OSTYPE = 'darwin20' ]] ; then
 	echo -e "\n$bold_red You are not on a VM Linux, you are on a MacOS :/\n"
 	exit
 fi
