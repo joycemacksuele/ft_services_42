@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+  labels:
+    app: grafana-app
+  annotations:
+    metallb.universe.tf/address-pool: default
+spec:
+  selector:
+    app: grafana-app
+    tier: influxdb
+  ports:
+    - name: grafana-port
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment
+  labels:
+    app: grafana-app
+    tier: influxdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana-app
+      tier: influxdb
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: grafana-app
+        tier: influxdb
+    spec:
+      containers:
+      - image: 7_grafana_influxdblinked
+        name: grafana-container
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+          name: grafana-port
+          hostPort: 3000

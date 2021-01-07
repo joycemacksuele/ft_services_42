@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-service
+  labels:
+    app: wordpress-app
+  annotations:
+    metallb.universe.tf/address-pool: default
+spec:
+  selector:
+    app: wordpress-app
+    tier: mysql
+  ports:
+    - name: wordpress-port
+      protocol: TCP
+      port: 5050
+      targetPort: 5050
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress-deployment
+  labels:
+    app: wordpress-app
+    tier: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress-app
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress-app
+        tier: mysql
+    spec:
+      containers:
+      - image: 4_wordpress_mysqllinked
+        name: wordpress-container
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5050
+          name: wordpress-port
+          hostPort: 5050

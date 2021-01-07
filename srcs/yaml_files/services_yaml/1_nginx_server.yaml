@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+  labels:
+    app: nginx-app
+  annotations:
+    # MetalLB also supports requesting a specific address pool,
+    # (if you want a certain kind of address but don’t care which one exactly)
+    # To request assignment from a specific pool, add the
+    # metallb.universe.tf/address-pool annotation to your service, with the
+    # name of the address pool as the annotation value.
+    metallb.universe.tf/address-pool: default
+spec:
+  selector:
+    app: nginx-app
+  ports:
+    - name: http-port
+      protocol: TCP # The default protocol for Services is TCP
+      port: 80
+      targetPort: 80
+    - name: https-port
+      protocol: TCP
+      port: 443
+      targetPort: 443
+    - name: ssh-port
+      protocol: TCP
+      port: 22
+      targetPort: 22
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: # describes the deployment itself
+  name: nginx-deployment
+  labels:
+    app: nginx-app
+spec:
+  replicas: 1 # How many copies of each pod do we want?
+  selector: # Which pods are managed by this deployment?
+    matchLabels: # tells what pods the deployment will apply to. It must match
+                 # the label on the service metadata labels config
+      app: nginx-app
+  strategy: # How do want to update the pods?
+    type: Recreate # it'll delete existing pods before creating new ones
+  template: # is actually a pod template, it describes the pod that the
+            # deployment is deploying
+    metadata:
+      labels:
+        app: nginx-app
+    spec:
+      containers:
+      - image: 1_nginx_server
+        name: nginx-container
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: http-port
+        - containerPort: 443
+          name: https-port
+          hostPort: 443
+        - containerPort: 22
+          name: ssh-port
