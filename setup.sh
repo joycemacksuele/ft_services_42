@@ -53,11 +53,22 @@ function config_cluster_ips()
 	MINIKUBE_IP="$(kubectl get node -o=custom-columns='DATA:status.addresses[0].address' | sed -n 2p)"
 	# -n = will not print anything unless an explicit request to print is found
 	# 2p = request to print second line
-	#NGINX_IP=192.168.49.3
-	#FTPS_IP=192.168.49.4
-	WORDPRESS_IP=192.168.49.5
-	PHPMYADMIN_IP=192.168.49.6
-	GRAFANA_IP=192.168.49.7
+
+	if [[ $2 = 'vm' ]] ; then
+		NGINX_IP=192.168.49.3
+		FTPS_IP=192.168.49.4
+		WORDPRESS_IP=192.168.49.5
+		PHPMYADMIN_IP=192.168.49.6
+		GRAFANA_IP=192.168.49.7
+	fi
+
+	if [[ $2 = 'mac' ]] ; then
+		NGINX_IP=192.168.99.106
+		FTPS_IP=192.168.99.107
+		WORDPRESS_IP=192.168.99.108
+		PHPMYADMIN_IP=192.168.99.109
+		GRAFANA_IP=192.168.99.100
+	fi
 }
 
 
@@ -67,32 +78,69 @@ if [[ $1 = 'delete' ]] ; then
 	config_cluster_ips
 	echo -ne "\n$bold_yellow Unset IP addresses variables...$reset"
 
-	for path in srcs/services/1_nginx_server/basic_nginx.conf
-	do
-		sed -i 's/'$WORDPRESS_IP'/WORDPRESS_IP/g' $path
-		sed -i 's/'$PHPMYADMIN_IP'/PHPMYADMIN_IP/g' $path
-		sed -i 's/'$GRAFANA_IP'/GRAFANA_IP/g' $path
-		echo -ne "\nIP variables were unset inside the file $path"
-	done
+	if [[ $2 = 'vm' ]] ; then
+		for path in srcs/services/1_nginx_server/basic_nginx.conf
+		do
+			sed -i 's/'$WORDPRESS_IP'/WORDPRESS_IP/g' $path
+			sed -i 's/'$PHPMYADMIN_IP'/PHPMYADMIN_IP/g' $path
+			sed -i 's/'$GRAFANA_IP'/GRAFANA_IP/g' $path
+			echo -ne "\nIP variables were unset inside the file $path"
+		done
 
-	for path in srcs/services/1_nginx_server/index.html
-	do
-		sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
-		echo -ne "\nMINIKUBE_IP variable was unset inside the file $path"
-	done
+		for path in srcs/services/1_nginx_server/index.html
+		do
+			sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
+			echo -ne "\nMINIKUBE_IP variable was unset inside the file $path"
+		done
 
-	for path in srcs/services/3_mysql_database/wordpress.sql
-	do
-		sed -i 's/172.17.0.7/WORDPRESS_IP/g' $path
-		sed -i 's/192.168.49.5/WORDPRESS_IP/g' $path
-		echo -ne "\nWORDPRESS_IP variable was unset inside the file $path"
-	done
+		for path in srcs/services/3_mysql_database/wordpress.sql
+		do
+			sed -i 's/'$NGINX_IP'/NGINX_IP/g' $path
+			sed -i 's/'$FTPS_IP'/FTPS_IP/g' $path
+			sed -i 's/'$WORDPRESS_IP'/WORDPRESS_IP/g' $path
+			sed -i 's/'$PHPMYADMIN_IP'/PHPMYADMIN_IP/g' $path
+			sed -i 's/'$GRAFANA_IP'/GRAFANA_IP/g' $path
+			echo -ne "\nIP variables were unset inside the file $path"
+		done
 
-	for path in srcs/services/7_grafana_influxdblinked/grafana.ini
-	do
-		sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
-		echo -ne "\nMINIKUBE_IP variable was unset inside the file $path \n"
-	done
+		for path in srcs/services/7_grafana_influxdblinked/grafana.ini
+		do
+			sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
+			echo -ne "\nMINIKUBE_IP variable was unset inside the file $path \n"
+		done
+	fi
+
+	if [[ $2 = 'mac' ]] ; then
+		for path in srcs/services/1_nginx_server/basic_nginx.conf
+		do
+			sed -i '' 's/'$PHPMYADMIN_IP'/PHPMYADMIN_IP/g' $path
+			sed -i '' 's/'$GRAFANA_IP'/GRAFANA_IP/g' $path
+			echo -ne "\nIP variables were unset inside the file $path"
+		done
+
+		for path in srcs/services/1_nginx_server/index.html
+		do
+			sed -i '' 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
+			echo -ne "\nMINIKUBE_IP variable was unset inside the file $path"
+		done
+
+		for path in srcs/services/3_mysql_database/wordpress.sql
+		do
+			sed -i '' 's/'$NGINX_IP'/NGINX_IP/g' $path
+			sed -i '' 's/'$FTPS_IP'/FTPS_IP/g' $path
+			sed -i '' 's/'$WORDPRESS_IP'/WORDPRESS_IP/g' $path
+			sed -i '' 's/'$PHPMYADMIN_IP'/PHPMYADMIN_IP/g' $path
+			sed -i '' 's/'$GRAFANA_IP'/GRAFANA_IP/g' $path
+			echo -ne "\nIP variables were unset inside the file $path"
+		done
+
+		for path in srcs/services/7_grafana_influxdblinked/grafana.ini
+		do
+			sed -i '' 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
+			echo -ne "\nMINIKUBE_IP variable was unset inside the file $path \n"
+		done
+	fi
+
 
 	echo -ne "\n$bold_yellow Deleting all services...\n$reset"
 	# delete this part if minikube tunnel is used
@@ -206,7 +254,11 @@ function edit_ip_variable()
 
 		for path in srcs/services/1_nginx_server/index.html
 		do
-			sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
+			if [[ $2 = 'vm' ]] ; then
+				sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
+			else
+				sed -i '' 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
+			fi
 		done
 	fi
 
@@ -214,7 +266,11 @@ function edit_ip_variable()
 	if [[ $1 = 'wordpressdump' ]] ; then
 		for path in srcs/services/3_mysql_database/wordpress.sql
 		do
+			sed -i.bak 's/NGINX_IP/'$NGINX_IP'/g' $path
+			sed -i.bak 's/FTPS_IP/'$FTPS_IP'/g' $path
 			sed -i.bak 's/WORDPRESS_IP/'$WORDPRESS_IP'/g' $path
+			sed -i.bak 's/PHPMYADMIN_IP/'$PHPMYADMIN_IP'/g' $path
+			sed -i.bak 's/GRAFANA_IP/'$GRAFANA_IP'/g' $path
 		done
 	fi
 
@@ -222,7 +278,11 @@ function edit_ip_variable()
 	if [[ $1 = 'grafana' ]] ; then
 		for path in srcs/services/7_grafana_influxdblinked/grafana.ini
 		do
-			sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
+			if [[ $2 = 'vm' ]] ; then
+				sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
+			else
+				sed -i '' 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
+			fi
 		done
 	fi
 	sleep 3
@@ -261,7 +321,7 @@ function build_docker_images()
 ######################### 3_mysql_database #######################
 	# MySQL database server exposed on port 3306
 	edit_ip_variable 'wordpressdump'
-	echo -ne "$bold_green WORDPRESS_IP variable inside ./srcs/services/3_mysql_database/wordpress.sql file was replaced with the address $WORDPRESS_IP\n\n"
+	echo -ne "$bold_green IP variables inside ./srcs/services/3_mysql_database/wordpress.sql file were replaced\n\n"
 
 	echo -ne "$bold_yellow Building a MySQL database image...\n$reset"
 	docker build -t 3_mysql_database srcs/services/3_mysql_database/ > 3_mysql_database.txt
