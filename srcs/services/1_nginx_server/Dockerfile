@@ -59,6 +59,8 @@ RUN echo -e "\n---\nWelcome to the Nginx container - 42 ft_services project by j
 # add ssh user: "user", with password: "password"
 RUN adduser -D user
 RUN echo "user:password" | /usr/sbin/chpasswd
+RUN mkdir /var/lib/nginx/tmp/proxy
+RUN chown -R www:www /var/lib/nginx/tmp/proxy
 
 
 EXPOSE 80 443 22

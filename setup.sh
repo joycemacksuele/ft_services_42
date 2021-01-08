@@ -44,41 +44,20 @@ fi
 
 
 ###################### Configure Minikube IP ######################
-# Asking Kubernetes more specifically about its true addresses, because
-# in some cases, calling minikube ip (which is heavily used in this project)
-# will return 172.0.0.1 on Linux. However, your cluster will normally be
-# discoverable somewhere around 172.17.0.2
+# Asking Kubernetes more specifically about its true addresses
 function config_cluster_ips()
 {
 	MINIKUBE_IP="$(kubectl get node -o=custom-columns='DATA:status.addresses[0].address' | sed -n 2p)"
 	# -n = will not print anything unless an explicit request to print is found
 	# 2p = request to print second line
-	if [[ $OSTYPE = 'linux-gnu' ]] ; then
-#		NGINX_IP=192.168.49.3
-#		FTPS_IP=192.168.49.4
-#		WORDPRESS_IP=192.168.49.5
-#		PHPMYADMIN_IP=192.168.49.6
-#		GRAFANA_IP=192.168.49.7
-		NGINX_IP="${MINIKUBE_IP::11}3"
-		FTPS_IP="${MINIKUBE_IP::11}4"
-		WORDPRESS_IP="${MINIKUBE_IP::11}5"
-		PHPMYADMIN_IP="${MINIKUBE_IP::11}6"
-		GRAFANA_IP="${MINIKUBE_IP::11}7"
-#		echo -e "$bold_red $GRAFANA_IP\n"
-	fi
 
-	if [[ $OSTYPE = 'darwin20' ]] ; then
-#		NGINX_IP=192.168.99.103
-#		FTPS_IP=192.168.99.104
-#		WORDPRESS_IP=192.168.99.105
-#		PHPMYADMIN_IP=192.168.99.106
-#		GRAFANA_IP=192.168.99.107
-		NGINX_IP="${MINIKUBE_IP::13}3"
-		FTPS_IP="${MINIKUBE_IP::13}4"
-		WORDPRESS_IP="${MINIKUBE_IP::13}5"
-		PHPMYADMIN_IP="${MINIKUBE_IP::13}6"
-		GRAFANA_IP="${MINIKUBE_IP::13}7"
-	fi
+	clang -o get_service_ip cluster_ip_pool.c
+	NGINX_IP=$(./get_service_ip "$MINIKUBE_IP")
+	FTPS_IP=$(./get_service_ip "$NGINX_IP")
+	WORDPRESS_IP=$(./get_service_ip "$FTPS_IP")
+	PHPMYADMIN_IP=$(./get_service_ip "$WORDPRESS_IP")
+	GRAFANA_IP=$(./get_service_ip "$PHPMYADMIN_IP")
+	rm get_service_ip
 }
 
 
@@ -122,13 +101,14 @@ if [[ $1 = 'delete' ]] ; then
 
 		for path in srcs/yaml_files/loadbalancer_metallb.yaml
 		do
-			sed -i 's/'${MINIKUBE_IP::11}3-${MINIKUBE_IP::11}7'/CLUSTER_POOL/g' $path
+			sed -i 's/'$NGINX_IP-$GRAFANA_IP'/'CLUSTER_POOL'/g' $path
 		done
 	fi
 
 	if [[ $2 = 'mac' ]] ; then
 		for path in srcs/services/1_nginx_server/basic_nginx.conf
 		do
+			sed -i '' 's/'$WORDPRESS_IP'/WORDPRESS_IP/g' $path
 			sed -i '' 's/'$PHPMYADMIN_IP'/PHPMYADMIN_IP/g' $path
 			sed -i '' 's/'$GRAFANA_IP'/GRAFANA_IP/g' $path
 			echo -ne "\nIP variables were unset inside the file $path"
@@ -159,7 +139,7 @@ if [[ $1 = 'delete' ]] ; then
 
 		for path in srcs/yaml_files/loadbalancer_metallb.yaml
 		do
-			sed -i 's/'${MINIKUBE_IP::13}3-${MINIKUBE_IP::13}7'/CLUSTER_POOL/g' $path
+			sed -i '' 's/'$NGINX_IP-$GRAFANA_IP'/'CLUSTER_POOL'/g' $path
 		done
 	fi
 
@@ -196,10 +176,6 @@ if [[ $1 = 'delete' ]] ; then
 	if [[ $2 = 'mac' ]] ; then
 		echo -ne "\n$bold_yellow Deleting Minikube...\n$reset"
 		minikube delete
-
-		echo -ne "\n$bold_yellow Deleting VirtualBox VM Minikube...\n$reset"
-		vboxmanage controlvm minikube poweroff
-		vboxmanage unregistervm --delete minikube
 	fi
 
 	echo -ne "\n$bold_green Done!\n\n"
@@ -255,16 +231,13 @@ function install_metallb()
 	for path in srcs/yaml_files/loadbalancer_metallb.yaml
 	do
 		if [[ $OSTYPE = 'linux-gnu' ]] ; then
-			sed -i 's/CLUSTER_POOL/'${MINIKUBE_IP::11}3-${MINIKUBE_IP::11}7'/g' $path
+			sed -i 's/'CLUSTER_POOL'/'$NGINX_IP-$GRAFANA_IP'/g' $path
 		elif [[ $OSTYPE = 'darwin20' ]] ; then
-			sed -i 's/CLUSTER_POOL/'${MINIKUBE_IP::13}3-${MINIKUBE_IP::13}7'/g' $path
+			sed -i '' 's/'CLUSTER_POOL'/'$NGINX_IP-$GRAFANA_IP'/g' $path
 		fi
-		echo -ne "$bold_green CLUSTER_POOL variable inside $path file was replaced\n\n"
+		echo -ne "\n$bold_green CLUSTER_POOL variable inside $path file was replaced\n\n$reset"
 	done
 
-#	if [[ $OSTYPE = 'darwin20' ]] ; then
-#		kubectl apply -f srcs/yaml_files/loadbalancer_metallb_mac.yaml
-#	elif [[ $OSTYPE = 'linux-gnu' ]] ; then
 	kubectl apply -f srcs/yaml_files/loadbalancer_metallb.yaml
 #	fi
 }
@@ -441,7 +414,8 @@ function kubernetes_dashboard()
 	echo -ne "$bold_yellow Starting Kubernetes web dashboard...\n\n$reset"
 	# If Minikube was not being used, a more complex "installation" would have to be done
 	# BUT as Minikube has integrated support for the Kubernetes Dashboard UI, just run:
-	$1 minikube dashboard &
+	$1 minikube dashboard 2> /dev/null
+	sleep 3
 	# If you don’t want to open a web browser, the dashboard command can also simply
 	# emit a URL: minikube dashboard --url
 }
