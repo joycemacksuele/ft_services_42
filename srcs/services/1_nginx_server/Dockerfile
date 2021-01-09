@@ -32,6 +32,7 @@ RUN chown -R www:www /var/www
 RUN chmod -R 755 /var/www # just in case it's not already like this
 # 755 = u=rwx,go=rx (only user/owner can write)
 
+RUN rm /etc/nginx/nginx.conf
 COPY ./basic_nginx.conf /etc/nginx/nginx.conf
 # COPY  will chage the name of the file basic_nginx.conf to nginx.conf,
 # because nginx.conf does not exist as a directory or file
@@ -59,8 +60,6 @@ RUN echo -e "\n---\nWelcome to the Nginx container - 42 ft_services project by j
 # add ssh user: "user", with password: "password"
 RUN adduser -D user
 RUN echo "user:password" | /usr/sbin/chpasswd
-RUN mkdir /var/lib/nginx/tmp/proxy
-RUN chown -R www:www /var/lib/nginx/tmp/proxy
 
 
 EXPOSE 80 443 22
