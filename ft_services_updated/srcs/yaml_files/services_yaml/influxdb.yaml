@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: influxdb-service
+  labels:
+    app: influxdb-app
+spec:
+  selector:
+    app: influxdb-app
+  ports:
+    - name: influxdb-port
+      protocol: TCP
+      port: 8086
+      targetPort: 8086
+  type: ClusterIP # No need to have an external ip for a backend service
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: influxdb-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: influxdb-pv-claim
+  labels:
+    app: influxdb-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: influxdb-deployment
+  labels:
+    app: influxdb-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: influxdb-app
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: influxdb-app
+    spec:
+      containers:
+      - image: influxdb
+        name: influxdb-container
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8086
+          name: influxdb-port
+          hostPort: 8086
+        volumeMounts:
+        - name: influxdb-persistent-storage
+          mountPath: /var/lib/influxdb
+      volumes:
+      - name: influxdb-persistent-storage
+        persistentVolumeClaim:
+          claimName: influxdb-pv-claim
