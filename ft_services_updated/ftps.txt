@@ -1,0 +1,84 @@
+Sending build context to Docker daemon   7.68kB
+Step 1/19 : FROM alpine:latest
+ ---> 389fef711851
+Step 2/19 : MAINTAINER Joyce Freitas <jfreitas@student.19.fr>
+ ---> Using cache
+ ---> a824dfc6f02f
+Step 3/19 : RUN apk update && apk upgrade
+ ---> Using cache
+ ---> e56a5c1950e1
+Step 4/19 : RUN apk add vsftpd
+ ---> Running in 3f5c5e115c01
+(1/3) Installing libcap (2.27-r0)
+(2/3) Installing linux-pam (1.3.1-r4)
+(3/3) Installing vsftpd (3.0.3-r6)
+Executing vsftpd-3.0.3-r6.pre-install
+Executing busybox-1.31.1-r19.trigger
+OK: 7 MiB in 17 packages
+Removing intermediate container 3f5c5e115c01
+ ---> b619305fd821
+Step 5/19 : RUN apk add openssl
+ ---> Running in 647941e48db9
+(1/1) Installing openssl (1.1.1i-r0)
+Executing busybox-1.31.1-r19.trigger
+OK: 8 MiB in 18 packages
+Removing intermediate container 647941e48db9
+ ---> eb65ca3a74e2
+Step 6/19 : RUN openssl req -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out /etc/ssl/certs/vsftpd.crt -keyout /etc/ssl/private/vsftpd.key -subj "/C=FR/ST=Paris/L=75017/O=42 school/CN=ft_services"
+ ---> Running in d62f446785c1
+[91mGenerating a RSA private key
+..[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m..[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m+[0m[91m+[0m[91m+[0m[91m+
+[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m.[0m[91m+[0m[91m+[0m[91m+[0m[91m+
+[0m[91mwriting new private key to '/etc/ssl/private/vsftpd.key'
+[0m[91m-----
+[0mRemoving intermediate container d62f446785c1
+ ---> 099920353df4
+Step 7/19 : RUN chmod 600 /etc/ssl/certs/vsftpd.crt
+ ---> Running in 600b405e996f
+Removing intermediate container 600b405e996f
+ ---> 27c8aa33513b
+Step 8/19 : RUN chmod 600 /etc/ssl/private/vsftpd.key
+ ---> Running in 1227eb83fd0b
+Removing intermediate container 1227eb83fd0b
+ ---> 018a81538fb0
+Step 9/19 : COPY ./my_vsftpd.conf /etc/vsftpd/vsftpd.conf
+ ---> e8a79a9d4fbd
+Step 10/19 : RUN mkdir -p /ftps/user
+ ---> Running in dd26a5addd86
+Removing intermediate container dd26a5addd86
+ ---> 7ab3669576de
+Step 11/19 : RUN adduser -D user
+ ---> Running in a80ae4e0491c
+Removing intermediate container a80ae4e0491c
+ ---> 14a3e010a16b
+Step 12/19 : RUN echo "user:password" | /usr/sbin/chpasswd
+ ---> Running in ea44b8922dea
+[91mchpasswd: password for 'user' changed
+[0mRemoving intermediate container ea44b8922dea
+ ---> 714282151620
+Step 13/19 : RUN chown -R user:user /ftps/user
+ ---> Running in ba4664452b74
+Removing intermediate container ba4664452b74
+ ---> fda90ed1e09c
+Step 14/19 : RUN chmod -R 755 /ftps/user
+ ---> Running in c78f00c7ccfb
+Removing intermediate container c78f00c7ccfb
+ ---> fcf030d586ef
+Step 15/19 : COPY ./dummy_test.txt /ftps/user/
+ ---> a259c6b5c38c
+Step 16/19 : EXPOSE 20 21 21000
+ ---> Running in 08fd0833c6bf
+Removing intermediate container 08fd0833c6bf
+ ---> 2d335372e07f
+Step 17/19 : COPY ./start.sh /tmp/
+ ---> bdf2069c26d5
+Step 18/19 : RUN chmod +x /tmp/start.sh
+ ---> Running in 05be1e069c46
+Removing intermediate container 05be1e069c46
+ ---> f7404227d64d
+Step 19/19 : CMD /tmp/start.sh
+ ---> Running in e6f89060b337
+Removing intermediate container e6f89060b337
+ ---> c96997348643
+Successfully built c96997348643
+Successfully tagged ftps:latest

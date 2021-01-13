@@ -1,0 +1,54 @@
+Sending build context to Docker daemon   16.9kB
+Step 1/12 : FROM alpine:latest
+ ---> 389fef711851
+Step 2/12 : MAINTAINER Joyce Freitas <jfreitas@student.19.fr>
+ ---> Using cache
+ ---> a824dfc6f02f
+Step 3/12 : RUN apk update && apk upgrade
+ ---> Using cache
+ ---> e56a5c1950e1
+Step 4/12 : RUN apk add libc6-compat
+ ---> Using cache
+ ---> 0f2329828cd7
+Step 5/12 : RUN wget https://dl.influxdata.com/telegraf/releases/telegraf-1.13.3-static_linux_amd64.tar.gz     && tar -C . -xzf telegraf-1.13.3-static_linux_amd64.tar.gz
+ ---> Running in 159cb2fa5d61
+[91mConnecting to dl.influxdata.com (65.8.180.110:443)
+[0m[91msaving to 'telegraf-1.13.3-static_linux_amd64.tar.gz'
+[0m[91mtelegraf-1.13.3-stat   4% |*                               |  799k  0:00:23 ETA
+[0m[91mtelegraf-1.13.3-stat  26% |********                        | 5271k  0:00:05 ETA
+[0m[91mtelegraf-1.13.3-stat  41% |*************                   | 8131k  0:00:04 ETA
+[0m[91mtelegraf-1.13.3-stat  52% |****************                |  9.9M  0:00:03 ETA
+[0m[91mtelegraf-1.13.3-stat  61% |*******************             | 11.7M  0:00:03 ETA
+[0m[91mtelegraf-1.13.3-stat  71% |**********************          | 13.6M  0:00:02 ETA
+[0m[91mtelegraf-1.13.3-stat [0m[91m 81% |**************************      | 15.6M  0:00:01 ETA
+[0m[91mtelegraf-1.13.3-stat  92% |*****************************   | 17.5M  0:00:00 ETA
+[0m[91mtelegraf-1.13.3-stat 100% |********************************| 19.0M  0:00:00 ETA
+'telegraf-1.13.3-static_linux_amd64.tar.gz' saved
+[0mRemoving intermediate container 159cb2fa5d61
+ ---> 38a15c7d5336
+Step 6/12 : RUN chmod +x telegraf/*
+ ---> Running in ba1b318eb58a
+Removing intermediate container ba1b318eb58a
+ ---> 4998af0eaaab
+Step 7/12 : RUN cp telegraf/telegraf /usr/bin/
+ ---> Running in fbdf8b4132a6
+Removing intermediate container fbdf8b4132a6
+ ---> 26e3c86d93ad
+Step 8/12 : RUN mkdir /etc/telegraf
+ ---> Running in 59ee84ce21ee
+Removing intermediate container 59ee84ce21ee
+ ---> 867996f9889d
+Step 9/12 : COPY ./telegraf.conf /etc/telegraf/telegraf.conf
+ ---> 33db78ebc2e0
+Step 10/12 : COPY ./start.sh /tmp/
+ ---> 5930329bd2cb
+Step 11/12 : RUN chmod +x /tmp/start.sh
+ ---> Running in b544c72c0183
+Removing intermediate container b544c72c0183
+ ---> 7ce7f3996293
+Step 12/12 : CMD /tmp/start.sh
+ ---> Running in 18b5c15896c3
+Removing intermediate container 18b5c15896c3
+ ---> d287ce58177b
+Successfully built d287ce58177b
+Successfully tagged telegraf:latest
