@@ -3,6 +3,8 @@
 # The VM has to have at least 2 CPU cores available. It doesn’t by default, go
 # into VirtualboxVM settings and add another core to it.
 
+# 42 VM xUbuntu packets to install: https://pastebin.com/4HnnSUpe
+
 ############################ Colors ##############################
 bold_black='\033[1;30m'
 bold_red='\033[1;31m'
@@ -67,7 +69,6 @@ function config_cluster_ips()
 
 ####################### Checking services ########################
 if [[ $1 = 'check_services' ]] ; then
-#	config_cluster_ips
 	minikube status | grep -c "Running" > /dev/null
 	if [[ $? == 0 ]] ; then
 		config_cluster_ips
@@ -109,26 +110,34 @@ if [[ $1 = 'check_services' ]] ; then
 	echo -e "$bold_white ------------------------------------\n"
 
 #################### Kubernetes web dashboard ####################
+	echo -e "$bold_white Dashboard:\n$reset"
+
+	echo -e " If needed, run the command$bold_green minikube dashboard$reset to check the dashboard again!\n$link_cyan"
 	# Kubernetes dashboard is a web-based UI for Kubernetes clusters
 	# This will help you manage your clusters
-
-	echo -e "\n$bold_white Press 'ENTER' to start the Kubernetes web dashboard"
-	echo -e "\n If needed, run the command$bold_green minikube dashboard$bold_white to check the dashboard again!$reset$link_cyan"
-	read REPLY
-
 	# If Minikube was not being used, a more complex "installation" would have to be done
 	# BUT as Minikube has integrated support for the Kubernetes Dashboard UI, just run:
-	sudo minikube dashboard 2> /dev/null
+	sudo minikube dashboard
 	# If you don’t want to open a web browser, the dashboard command can also simply
 	# emit a URL: minikube dashboard --URL
+
 	read REPLY
+#	echo -e "\n$bold_white Press 'ENTER' to start the Kubernetes web dashboard"
+#	read REPLY
+
 fi
 
 
 ###################### Deleting everything #######################
 if [[ $1 = 'delete' ]] ; then
+	minikube status | grep -c "Running" > /dev/null
+	if [[ $? == 0 ]] ; then
+		config_cluster_ips
+	else
+		echo -e "\n$bold_red No cluster set up.\n\n$bold_green To set up a cluster, run:$bold_white ./setup.sh$reset\n"
+		exit
+	fi
 	\clear
-	config_cluster_ips
 	echo -ne "\n$bold_yellow Unset IP addresses variables...$reset"
 
 	for path in srcs/services/nginx/basic_nginx.conf
@@ -147,12 +156,7 @@ if [[ $1 = 'delete' ]] ; then
 
 	for path in srcs/services/mysql/wordpress.sql
 	do
-		#sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
-		#sed -i 's/'$NGINX_IP'/NGINX_IP/g' $path
-		#sed -i 's/'$FTPS_IP'/FTPS_IP/g' $path
 		sed -i 's/'$WORDPRESS_IP'/WORDPRESS_IP/g' $path
-		#sed -i 's/'$PHPMYADMIN_IP'/PHPMYADMIN_IP/g' $path
-		#sed -i 's/'$GRAFANA_IP'/GRAFANA_IP/g' $path
 		echo -ne "\nWORDPRESS_IP variable was unset inside the file $path"
 	done
 
@@ -204,7 +208,6 @@ elif [[ $1 = 'correction' ]] ; then
 		echo -e "\n$bold_red No cluster set up.\n\n$bold_green To set up a cluster, run:$bold_white ./setup.sh$reset\n"
 		exit
 	fi
-#	\clear
 	SERVICES="nginx ftps mysql wordpress phpmyadmin influxdb grafana telegraf"
 
 	echo -e "\n$bold_white- Checking if services exist and have the correct name:"
@@ -347,7 +350,6 @@ elif [[ $1 = 'correction' ]] ; then
 	sleep 5
 	kubectl get pods
 	echo -e "\n$bold_white If needed, run the same command again!$reset\n"
-#	read REPLY
 	exit
 fi
 
@@ -424,12 +426,7 @@ function edit_ip_variable()
 	if [[ $1 = 'wordpressdump' ]] ; then
 		for path in srcs/services/mysql/wordpress.sql
 		do
-			#sed -i.bak 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
-			#sed -i.bak 's/NGINX_IP/'$NGINX_IP'/g' $path
-			#sed -i.bak 's/FTPS_IP/'$FTPS_IP'/g' $path
 			sed -i.bak 's/WORDPRESS_IP/'$WORDPRESS_IP'/g' $path
-			#sed -i.bak 's/PHPMYADMIN_IP/'$PHPMYADMIN_IP'/g' $path
-			#sed -i.bak 's/GRAFANA_IP/'$GRAFANA_IP'/g' $path
 		done
 	fi
 
@@ -563,10 +560,10 @@ echo -ne " If requested, please type the ${bold_white}$(whoami) password ${bold_
 sleep 3
 # Modifying the user account, adding the user whoami to the group sudo
 # Group is a list of supplementary groups which the user is also a member of
-sudo usermod -aG sudo $(whoami) > /dev/null
+sudo usermod -aG sudo $(whoami) &> /dev/null
 
-sudo apt-get -y update > /dev/null
-sudo apt-get -y upgrade > /dev/null
+sudo apt-get -y update &> /dev/null
+sudo apt-get -y upgrade &> /dev/null
 
 echo -e "$bold_green Done!\n"
 echo -e "$bold_white ------------------------------------\n"
@@ -641,17 +638,22 @@ function install_docker()
 	echo -ne "$bold_yellow Intalling newer Docker version...$bold_white\n"
 	# The Docker Engine package is now called docker-ce
 	sudo apt-get -y install docker-ce docker-ce-cli containerd.io &> /dev/null
+
+	echo -ne "\n$bold_green Docker installed!\n\n"
+	echo -e "$bold_white ------------------------------------\n"
+}
+
+function sudo_docker()
+{
 	# Manage Docker as a non-root user:
 	# For some reason, by default, on 42's VM you can't run Docker without
 	# sudo and Minikube will not work if that's the case. So let's fix that:
-	sudo groupadd docker &> /dev/null
+	sudo groupadd docker &> /dev/null # or sudo newgroup docker ??????????????????????????????????????????????????????
 	sudo usermod -aG docker $(whoami) &> /dev/null
 	# Configure Docker to start on boot:
 	# systemctl command is basically a more powerful version of service (used on linux)
 	sudo systemctl enable docker &> /dev/null
 	sudo systemctl start docker
-	echo -ne "\n$bold_green Docker installed!\n\n"
-	echo -e "$bold_white ------------------------------------\n"
 }
 
 echo -ne "$bold_yellow Checking if Docker is installed and up to date...\n"
@@ -663,11 +665,15 @@ if [[ $DOCKER_IO = 'docker: /usr/share/docker.io' ]] ; then
 	# docker-engine. If these are installed, uninstall them:
 	echo -ne "\n$bold_yellow Deleting older version...\n\n"
 	install_docker
+	sudo_docker
 elif [[ $WHICH_DOCKER != '/usr/bin/docker' ]] ; then
 	echo -ne "\n$bold_red Docker is not installed!\n"
 	install_docker
+	sudo_docker
 else
+	sudo_docker
 	echo -ne "\n$bold_green Docker is already the newer version!\n\n"
+
 	echo -e "$bold_white ------------------------------------\n"
 fi
 
@@ -716,9 +722,6 @@ echo -e "$bold_white ------------------------------------\n"
 ############################ Services ############################
 build_docker_images
 create_pods_services
-
-#echo -ne "\033[5;32m Minikube IP will open on your browser: http://$MINIKUBE_IP/\n\n$reset"
-#xdg-open http://$MINIKUBE_IP
 
 
 ########################### Correction ###########################
