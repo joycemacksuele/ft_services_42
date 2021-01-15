@@ -564,7 +564,7 @@ sleep 3
 sudo usermod -aG sudo $(whoami) &> /dev/null
 
 sudo apt-get -y update &> /dev/null
-sudo apt-get -y upgrade &> /dev/null
+#sudo apt-get -y upgrade &> /dev/null
 
 echo -e "$bold_green Done!\n"
 echo -e "$bold_white ------------------------------------\n"
@@ -673,7 +673,7 @@ elif [[ $WHICH_DOCKER != '/usr/bin/docker' ]] ; then
 	install_docker
 	sudo_docker
 else
-	sudo_docker
+	#sudo_docker
 	echo -ne "\n$bold_green Docker is already the newer version!\n\n"
 
 	echo -e "$bold_white ------------------------------------\n"
