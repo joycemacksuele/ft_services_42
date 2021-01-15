@@ -87,7 +87,8 @@ if [[ $1 = 'check_services' ]] ; then
 	echo -e "$bold_white - cluster IP: $reset$link_cyan$MINIKUBE_IP\n"
 
 	echo -e "$bold_white - nginx:$reset"
-	echo -e "    - with redirect to https:             $link_cyan http://$MINIKUBE_IP/$reset"
+	echo -e "    - https:                              $link_cyan https://$MINIKUBE_IP$reset"
+	echo -e "    - with redirect to https:             $link_cyan http://$MINIKUBE_IP$reset"
 	echo -e "    - reverse proxy to phpmyadmin:        $link_cyan https://$MINIKUBE_IP/phpmyadmin$reset"
 	echo -e "    - temporary redirect to wordpress:    $link_cyan https://$MINIKUBE_IP/wordpress$reset"
 	echo -e "    - ssh:                                 $>$link_cyan ssh -o StrictHostKeyChecking=no user@$NGINX_IP -p 22$reset"
@@ -130,13 +131,7 @@ fi
 
 ###################### Deleting everything #######################
 if [[ $1 = 'delete' ]] ; then
-	minikube status | grep -c "Running" > /dev/null
-	if [[ $? == 0 ]] ; then
-		config_cluster_ips
-	else
-		echo -e "\n$bold_red No cluster set up.\n\n$bold_green To set up a cluster, run:$bold_white ./setup.sh$reset\n"
-		exit
-	fi
+	config_cluster_ips
 	\clear
 	echo -ne "\n$bold_yellow Unset IP addresses variables...$reset"
 
@@ -148,11 +143,11 @@ if [[ $1 = 'delete' ]] ; then
 		echo -ne "\nIP variables were unset inside the file $path"
 	done
 
-	for path in srcs/services/nginx/index.html
-	do
-		sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
-		echo -ne "\nMINIKUBE_IP variable was unset inside the file $path"
-	done
+#	for path in srcs/services/nginx/index.html
+#	do
+#		sed -i 's/'$MINIKUBE_IP'/MINIKUBE_IP/g' $path
+#		echo -ne "\nMINIKUBE_IP variable was unset inside the file $path"
+#	done
 
 	for path in srcs/services/mysql/wordpress.sql
 	do
@@ -172,24 +167,32 @@ if [[ $1 = 'delete' ]] ; then
 		sed -i 's/'$GRAFANA_IP'/'CLUSTER_POOL_END'/g' $path
 	done
 
+	rm ./*.txt
+
+	minikube status | grep -c "Running" > /dev/null
+	if [[ $? == 0 ]] ; then
+		SERVICES="nginx ftps mysql wordpress phpmyadmin influxdb grafana telegraf"
+	else
+		echo -e "\n$bold_red No cluster set up.\n\n$bold_green To set up a cluster, run:$bold_white ./setup.sh$reset\n"
+		exit
+	fi
 
 	echo -ne "\n$bold_yellow Deleting all services...\n$reset"
 	# delete this part if minikube tunnel is used
 	kubectl delete -f srcs/yaml_files/loadbalancer_metallb.yaml
 
 
-	SERVICES="nginx ftps mysql wordpress phpmyadmin influxdb grafana telegraf"
 	# for loop = Expand words (see Shell Expansions), and execute commands once
 	# for each member in the resultant list
 	for service in $SERVICES
 	do
-		rm $service.txt
 		kubectl delete -f "srcs/yaml_files/services_yaml/$service.yaml"
 		echo ""
 	done
 
 	echo -ne "\n$bold_yellow Deleting Minikube...\n$reset"
 	sudo minikube delete
+	sudo minikube delete --profile='minikube'
 
 	echo -ne "\n$bold_yellow Deleting Minikube Docker image...\n$reset"
 	minikube_image=$(docker images | grep "minikube" | awk '{ print $3 }')
@@ -293,6 +296,10 @@ elif [[ $1 = 'correction' ]] ; then
 			;;
 			mysql)
 			kubectl exec $POD_NAME -- pkill mysqld 2>&1 > /dev/null
+			sleep 5
+			kubectl exec $POD_NAME -- pkill mysqld_safe 2>&1 > /dev/null
+			sleep 5
+			kubectl exec $POD_NAME -- pkill mariadb 2>&1 > /dev/null
 			if [ $? -ne 1 ]
 			then
 				echo -e "$bold_green $service killed$reset"
@@ -417,10 +424,10 @@ function edit_ip_variable()
 			sed -i.bak 's/GRAFANA_IP/'$GRAFANA_IP'/g' $path
 		done
 
-		for path in srcs/services/nginx/index.html
-		do
-			sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
-		done
+#		for path in srcs/services/nginx/index.html
+#		do
+#			sed -i 's/MINIKUBE_IP/'$MINIKUBE_IP'/g' $path
+#		done
 	fi
 
 ### MySQL wordpress dump for mysql
@@ -564,7 +571,7 @@ sleep 3
 sudo usermod -aG sudo $(whoami) &> /dev/null
 
 sudo apt-get -y update &> /dev/null
-#sudo apt-get -y upgrade &> /dev/null
+sudo apt-get -y upgrade &> /dev/null
 
 echo -e "$bold_green Done!\n"
 echo -e "$bold_white ------------------------------------\n"
