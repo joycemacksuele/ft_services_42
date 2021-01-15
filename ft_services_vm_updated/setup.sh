@@ -87,7 +87,7 @@ if [[ $1 = 'check_services' ]] ; then
 	echo -e "$bold_white - cluster IP: $reset$link_cyan$MINIKUBE_IP\n"
 
 	echo -e "$bold_white - nginx:$reset"
-	echo -e "    - with redirect to https:             $link_cyan http://$MINIKUBE_IP$reset"
+	echo -e "    - with redirect to https:             $link_cyan http://$MINIKUBE_IP/$reset"
 	echo -e "    - reverse proxy to phpmyadmin:        $link_cyan https://$MINIKUBE_IP/phpmyadmin$reset"
 	echo -e "    - temporary redirect to wordpress:    $link_cyan https://$MINIKUBE_IP/wordpress$reset"
 	echo -e "    - ssh:                                 $>$link_cyan ssh -o StrictHostKeyChecking=no user@$NGINX_IP -p 22$reset"
@@ -360,24 +360,25 @@ fi
 # This script will install it if it's not already installed
 # Normaly kubectl is already installed on the 42 Mac and the VM
 # <which> command will return 0 if the specified command is found and executable
-echo -ne "\n$bold_yellow Checking if Kubectl is installed...\n\n"
+###echo -ne "\n$bold_yellow Checking if Kubectl is installed...\n\n"
+echo -ne "\n$bold_green Installing Kubectl...$reset\n\n"
 # OBS: if color is between {} (ex: ${bold_green}, then no space is needed
-which kubectl > /dev/null
+###which kubectl > /dev/null
 # Another option so which is not needed: if [[ ! -d "/PATH"]] ; then
-if [[ $? == 0 ]] ; then
-	echo -ne "$bold_green Kubectl is already installed!\n\n"
-	echo -e "$bold_white ------------------------------------\n"
-else
-	echo -ne "$bold_red Kubectl is not installed.\n$bold_green Installing...$bold_white\n"
+###if [[ $? == 0 ]] ; then
+###	echo -ne "$bold_green Kubectl is already installed!\n\n"
+###	echo -e "$bold_white ------------------------------------\n"
+###else
+###	echo -ne "$bold_red Kubectl is not installed.\n$bold_green Installing...$bold_white\n"
 	sudo rm -rf /usr/local/bin/kubectl
 	curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
 	# Make the kubectl binary executable
 	chmod +x ./kubectl
 	# Add the Minikube executable to your path
 	sudo mv ./kubectl /usr/local/bin/kubectl
-	echo -ne "\n$bold_green Kubectl installed!\n\n"
+	echo -ne "\n$bold_green Done!\n\n"
 	echo -e "$bold_white ------------------------------------\n"
-fi
+###fi
 
 
 ######################### Install MetalLB #########################
@@ -650,7 +651,7 @@ function sudo_docker()
 	# sudo and Minikube will not work if that's the case. So let's fix that:
 	sudo groupadd docker &> /dev/null
 	sudo usermod -aG docker $(whoami) &> /dev/null
-	newgrp docker &
+	#newgrp docker
 	# Configure Docker to start on boot:
 	# systemctl command is basically a more powerful version of service (used on linux)
 	sudo systemctl enable docker &> /dev/null
