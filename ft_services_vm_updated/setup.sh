@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# The VM has to have at least 2 CPU cores available. It doesn’t by default, go
-# into VirtualboxVM settings and add another core to it.
-
-# 42 VM xUbuntu packets to install: https://pastebin.com/4HnnSUpe
-
 ############################ Colors ##############################
 bold_black='\033[1;30m'
 bold_red='\033[1;31m'
@@ -45,7 +40,17 @@ $bold_white ./setup.sh delete\n
 $bold_white ./setup.sh correction\n
 $bold_white ./setup.sh check_services\n
 $bold_green <by jfreitas @ Ecole 42>\n
-$bold_white ------------------------------------"
+$bold_white ------------------------------------\n"
+
+	echo -e "$bold_red IMPORTANT:"
+	echo -e "$bold_white The VM has to have at least 2 CPU cores available. It doesn’t by default, go into VirtualboxVM settings and add another core to it"
+	echo -e " 42 VM xUbuntu packets should be installed before run this script:$link_cyan https://pastebin.com/4HnnSUpe"
+	echo -e "$bold_yellow If those things are not done, please quit this scrip now and come back when ready!\n$reset"
+
+	echo -e "$bold_green If everything is ready... press 'ENTER' to continue$reset"
+	read REPLY
+	\clear
+	echo -e "$bold_white ------------------------------------"
 fi
 
 
@@ -111,20 +116,15 @@ if [[ $1 = 'check_services' ]] ; then
 
 #################### Kubernetes web dashboard ####################
 	echo -e "$bold_white Dashboard:\n$reset"
-
 	echo -e " If needed, run the command$bold_green minikube dashboard$reset to check the dashboard again!\n$link_cyan"
 	# Kubernetes dashboard is a web-based UI for Kubernetes clusters
 	# This will help you manage your clusters
-	# If Minikube was not being used, a more complex "installation" would have to be done
-	# BUT as Minikube has integrated support for the Kubernetes Dashboard UI, just run:
+	# If Minikube was not being used, a more complex "installation" would have
+	# to be done BUT as Minikube has integrated support for the Kubernetes
+	# Dashboard UI, just run:
 	sudo minikube dashboard
-	# If you don’t want to open a web browser, the dashboard command can also simply
-	# emit a URL: minikube dashboard --URL
-
-	read REPLY
-#	echo -e "\n$bold_white Press 'ENTER' to start the Kubernetes web dashboard"
-#	read REPLY
-
+	# If you don’t want to open a web browser, the dashboard command can also
+	# simply emit a URL: minikube dashboard --URL
 fi
 
 
@@ -648,12 +648,13 @@ function sudo_docker()
 	# Manage Docker as a non-root user:
 	# For some reason, by default, on 42's VM you can't run Docker without
 	# sudo and Minikube will not work if that's the case. So let's fix that:
-	sudo groupadd docker &> /dev/null # or sudo newgroup docker ??????????????????????????????????????????????????????
+	sudo groupadd docker &> /dev/null
 	sudo usermod -aG docker $(whoami) &> /dev/null
+	newgrp docker &
 	# Configure Docker to start on boot:
 	# systemctl command is basically a more powerful version of service (used on linux)
 	sudo systemctl enable docker &> /dev/null
-	sudo systemctl start docker
+	sudo systemctl start docker &> /dev/null
 }
 
 echo -ne "$bold_yellow Checking if Docker is installed and up to date...\n"

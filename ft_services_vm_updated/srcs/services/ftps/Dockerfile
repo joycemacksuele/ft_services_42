@@ -13,7 +13,7 @@ RUN chmod 600 /etc/ssl/certs/vsftpd.crt
 RUN chmod 600 /etc/ssl/private/vsftpd.key
 
 
-################################ FTP Config ###################################
+################################## Config #####################################
 COPY ./my_vsftpd.conf /etc/vsftpd/vsftpd.conf
 
 RUN mkdir -p /ftps/user
@@ -26,7 +26,7 @@ RUN chown -R user:user /ftps/user
 RUN chmod -R 755 /ftps/user
 
 # Copy a dummy file just so that we can see it during the correction
-COPY ./dummy_test.txt /ftps/user/
+COPY ./dummyfile /ftps/user/
 
 
 EXPOSE 20 21 21000
